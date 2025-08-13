@@ -1,0 +1,40 @@
+文档标签分类程序使用指南
+=============================
+
+程序位置: /Users/yangwan/Documents/MyProject/document_tagger/
+
+✅ 已完成功能:
+1. 新建了独立的 document_tagger 文件夹
+2. 实现了完整的三级标签分类系统
+3. 支持文档上传处理（.txt, .docx格式）
+4. 一级标签：8个类别中选择1个（需求类、设计类、开发类、测试类、运维类、管理类、会议类、其他类）
+5. 二级标签：20个部门标签中选择多个
+6. 三级标签：自动提取3-5个关键词
+7. 输出格式：文档标题-【一级标签】-【二级标签】-【三级标签】
+
+📁 文件结构:
+- document_tagger.py (主程序)
+- requirements.txt (依赖包列表)
+- README.md (详细说明文档)
+- test_document.txt (测试文档)
+- document_tags.txt (结果保存文件)
+- 使用指南.txt (本文件)
+
+🚀 使用方法:
+python3 document_tagger.py <文档路径>
+
+示例:
+python3 document_tagger.py test_document.txt
+
+📊 测试结果示例:
+test_document-【需求类】-【超品中心-财务-产研中心】-【用户-优化-团队-超品-流程】
+
+🔧 安装依赖 (可选，程序有降级处理):
+pip3 install -r requirements.txt
+
+⚠️ 注意事项:
+- 程序支持 .txt 和 .docx 格式
+- 未安装依赖时会自动降级到简化版本
+- 结果会自动保存到 document_tags.txt 文件
+- 二级标签支持多选，会根据文档内容自动匹配相关部门
+- 三级标签使用jieba分词或简化关键词提取
