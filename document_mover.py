@@ -58,7 +58,7 @@ def move_documents_to_projects(base_path, mapping):
             
             # 移动文件
             if target_dir.exists():
-                shutil.move(str(file_path), str(target_file))
+                shutil.copy2(str(file_path), str(target_file))
 
 
 def move_documents_by_csv(csv_file_path='document_tags.csv', base_path='.'):

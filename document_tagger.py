@@ -25,6 +25,9 @@ except ImportError:
 
 class DocumentTagger:
     def __init__(self):
+        # 构建过滤词典
+        self.filter_words = self._build_filter_dict()
+        
         # 文档属性分类定义
         self.document_types = {
             '需求类文档': [
@@ -74,6 +77,70 @@ class DocumentTagger:
             '质量管控项目': ['质量', '品控', '品质管理', '质量保证', '测试'],
             '流程优化项目': ['流程', '优化', '规范', '标准化', '制度', '管理']
         }
+
+    def _build_filter_dict(self):
+        """构建完整的过滤词典"""
+        filter_words = set()
+        
+        # 编程基础语法
+        filter_words.update({
+            'let', 'const', 'var', 'function', 'return', 'if', 'else', 'for', 'while',
+            'try', 'catch', 'throw', 'new', 'this', 'super', 'class', 'extends', 
+            'import', 'export', 'number', 'string', 'boolean', 'object', 'array', 
+            'null', 'undefined', 'true', 'false', 'typeof', 'instanceof', 'length',
+            'index', 'push', 'pop', 'slice', 'splice', 'map', 'filter', 'reduce',
+            'forEach', 'find', 'includes', 'indexOf', 'toString', 'join', 'split'
+        })
+        
+        # 代码变量和示例
+        filter_words.update({
+            'test', 'example', 'demo', 'sample', 'temp', 'tmp', 'data', 'info',
+            'item', 'element', 'count', 'num', 'str', 'obj', 'arr', 'list', 'result',
+            'p1', 'p2', 'x', 'y', 'z', 'a', 'b', 'c', 'i', 'j', 'k', 'n', 'm',
+            'getName', 'setName', 'getValue', 'setValue', 'test1', 'test2', 'animal', 
+            'target', 'source', 'dest', 'destination', 'param', 'arg', 'args', 'opts',
+            # React/TypeScript示例变量
+            'setCount', 'button', 'theme', 'tom', 'gender', 'Alarm', 'sum', 'Dog',
+            'Week', 'Empty', 'key', 'speak', 'legs', 'Provider', 'filters', 'Boolean',
+            'reverse', 'readonly', 'tomcat', 'buildName', 'firstName', 'lastName'
+        })
+        
+        # 通用动词
+        filter_words.update({
+            '使用', '调用', '执行', '运行', '创建', '生成', '获取', '设置', '删除', '修改',
+            '定义', '声明', '初始化', '配置', '启动', '停止', '开始', '结束', '处理', '操作',
+            '添加', '移除', '更新', '保存', '加载', '刷新', '重置', '清空', '检查', '验证',
+            'get', 'set', 'add', 'remove', 'update', 'delete', 'create', 'load', 'save',
+            'check', 'validate', 'init', 'start', 'stop', 'run', 'execute', 'call', 'invoke'
+        })
+        
+        # 通用名词
+        filter_words.update({
+            '方法', '属性', '参数', '变量', '对象', '数组', '字符串', '数字', '类型',
+            '系统', '平台', '服务', '模块', '功能', '特性', '内容', '信息',
+            'method', 'property', 'parameter', 'variable', 'system', 'platform', 
+            'service', 'module', 'feature', 'content', 'information',
+            # 编程通用概念
+            '函数', '接口', '渲染', '自定义', '示例', '函数参数', '构造函数', '子类',
+            '允许', '赋值', '报错', '修复', '装饰', '兼容性', '实现', '支持'
+        })
+        
+        # 控制台和调试相关
+        filter_words.update({
+            'console', 'log', 'debug', 'error', 'warn', 'trace', 'assert', 
+            'dir', 'table', 'group', 'time', 'timeEnd'
+        })
+        
+        # HTML/CSS相关基础词汇
+        filter_words.update({
+            'div', 'span', 'html', 'css', 'style', 'class', 'id', 'src', 'href',
+            'width', 'height', 'color', 'font', 'margin', 'padding', 'border',
+            # 颜色和常量
+            'Color', 'red', 'Green', 'Blue', 'Red', 'yellow', 'black', 'white',
+            'never', 'enum', 'void', 'private', 'public', 'protected'
+        })
+        
+        return filter_words
 
     def extract_text_from_file(self, file_path: str) -> Tuple[str, str]:
         """从文件中提取文本和标题"""
@@ -377,15 +444,53 @@ class DocumentTagger:
             return min(int(text_length / 1000) + 3, 30)  # 最多30个，避免过多
 
     def extract_keywords(self, text: str) -> List[str]:
-        """只从文档原文中提取确实存在的关键词"""
+        """使用jieba分词提取文档关键词"""
         if not text.strip():
             return []
         
         # 根据文档长度确定关键词数量
         num_keywords = self._get_keywords_count(len(text))
         
-        # 直接从原文提取关键词，不依赖jieba可能产生的虚假词汇
-        return self._extract_verified_keywords_from_text(text, num_keywords)
+        if HAS_JIEBA:
+            # 使用jieba提取关键词
+            jieba_keywords = jieba.analyse.extract_tags(text, topK=num_keywords*3, withWeight=False)
+            
+            # 新增：应用过滤词典（直接过滤掉词典中的所有词汇）
+            pre_filtered = [kw for kw in jieba_keywords if kw not in self.filter_words]
+            
+            # 验证和过滤关键词
+            valid_keywords = []
+            
+            # 扩展停用词库
+            stop_words = {
+                # 中文停用词
+                '的', '了', '在', '和', '与', '为', '是', '有', '及', '等', '可以', '进行', 
+                '通过', '或者', '如果', '但是', '因为', '所以', '这个', '那个', '我们', '他们', 
+                '她们', '它们', '之后', '之前', '什么', '怎么', '哪里', '什么时候', '为什么', 
+                '一个', '一种', '一些', '所有', '每个', '因此', '然后', '现在', '已经', '仍然', 
+                '只是', '也是', '还是', '或是', '就是', '不是', '没有', '这些', '那些', '值得注意的是',
+                '分支合并到', '不能', '需要', '应该', '必须', '可能', '能够', '发生', '出现', '存在',
+                # 英文停用词  
+                'not', 'to', 'is', 'any', 'if', 'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 
+                'at', 'by', 'for', 'with', 'from', 'as', 'be', 'are', 'was', 'were', 'been', 'have', 
+                'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might',
+                # 代码示例常见变量名
+                'Tom', 'Bird', 'Animal', 'Person', 'name', 'age', 'param', 'result', 'value', 'data',
+                'item', 'list', 'array', 'object', 'element', 'component', 'props', 'state', 'event'
+            }
+            
+            for keyword in pre_filtered:
+                if (keyword not in stop_words and 
+                    len(keyword) >= 2 and len(keyword) <= 8 and
+                    not keyword.isdigit() and
+                    self._absolute_strict_verify_word_in_text(keyword, text) and
+                    len(valid_keywords) < num_keywords):
+                    valid_keywords.append(keyword)
+                    
+            return valid_keywords
+        else:
+            # 降级处理：使用原有方法
+            return self._extract_verified_keywords_from_text(text, num_keywords)
     
     def _extract_verified_keywords_from_text(self, text: str, num_keywords: int) -> List[str]:
         """从原文中提取并验证关键词，完全避免jieba产生虚假词汇"""
