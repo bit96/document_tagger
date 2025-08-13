@@ -902,6 +902,14 @@ def main():
                 
                 # 保存所有结果到CSV
                 save_results_to_csv(results)
+                
+                # 创建项目目录结构
+                from project_directory_manager import manage_project_structure
+                manage_project_structure()
+                
+                # 移动文档到对应项目目录
+                from document_mover import move_documents_by_csv
+                move_documents_by_csv()
             else:
                 print("没有文件被处理")
                 
@@ -920,6 +928,14 @@ def main():
             
             # 保存结果到CSV
             save_results_to_csv([result])
+        
+        # 创建项目目录结构
+        from project_directory_manager import manage_project_structure
+        manage_project_structure()
+        
+        # 移动文档到对应项目目录
+        from document_mover import move_documents_by_csv
+        move_documents_by_csv()
         
     except Exception as e:
         print(f"处理时出错: {e}")
