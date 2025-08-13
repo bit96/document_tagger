@@ -670,11 +670,12 @@ class DocumentTagger:
         return final_summary
     
 
-    def format_output(self, title: str, project: str, doc_type: str, keywords: List[str], summary: str) -> Dict[str, str]:
+    def format_output(self, title: str, project: str, doc_type: str, keywords: List[str], summary: str, file_path: str = "") -> Dict[str, str]:
         """格式化输出结果为新的CSV格式"""
         return {
             '文档标题': title,
             '所属项目': project,
+            '原飞书文档路径': file_path,
             '文档关键词': f"{doc_type}; " + ('; '.join(keywords) if keywords else ''),
             '文档内容概述': summary
         }
@@ -682,6 +683,15 @@ class DocumentTagger:
     def process_document(self, file_path: str) -> Dict[str, str]:
         """处理单个文档"""
         print(f"正在处理文档: {file_path}")
+        
+        # 计算相对路径
+        current_dir = Path.cwd()
+        file_path_obj = Path(file_path)
+        try:
+            relative_path = str(file_path_obj.relative_to(current_dir))
+        except ValueError:
+            # 如果无法计算相对路径，使用绝对路径
+            relative_path = str(file_path_obj)
         
         # 提取文本和标题
         title, text = self.extract_text_from_file(file_path)
@@ -692,7 +702,7 @@ class DocumentTagger:
         # 处理空文档
         if not text.strip():
             print("⚠️ 文档内容为空")
-            return self.format_output(title, '未知项目', '知识类文档', [], '文档内容为空')
+            return self.format_output(title, '未知项目', '知识类文档', [], '文档内容为空', relative_path)
         
         # 新的分类体系
         project = self.identify_project(text, title)
@@ -707,7 +717,7 @@ class DocumentTagger:
         print(f"内容概述长度: {len(summary)} 字符")
         
         # 格式化输出
-        result = self.format_output(title, project, doc_type, keywords, summary)
+        result = self.format_output(title, project, doc_type, keywords, summary, relative_path)
         return result
     
     def process_directory(self, directory_path: str) -> List[Dict[str, str]]:
@@ -725,10 +735,10 @@ class DocumentTagger:
         # 支持的文件格式
         supported_extensions = ['.txt', '.docx']
         
-        # 获取所有支持的文件
+        # 获取所有支持的文件（递归搜索所有子目录）
         files_to_process = []
         for ext in supported_extensions:
-            files_to_process.extend(directory.glob(f'*{ext}'))
+            files_to_process.extend(directory.rglob(f'*{ext}'))
         
         if not files_to_process:
             print(f"在目录 {directory_path} 中未找到支持的文件格式: {supported_extensions}")
@@ -770,7 +780,7 @@ def save_results_to_csv(results: List[Dict[str, str]], output_file_path: str = "
     output_file = Path(output_file_path)
     
     # 新的CSV列名
-    fieldnames = ['文档标题', '所属项目', '文档关键词', '文档内容概述']
+    fieldnames = ['文档标题', '所属项目', '原飞书文档路径', '文档关键词', '文档内容概述']
     
     # 读取现有内容，避免重复
     existing_results = set()
@@ -779,8 +789,8 @@ def save_results_to_csv(results: List[Dict[str, str]], output_file_path: str = "
             with open(output_file, "r", encoding="utf-8", newline='') as f:
                 reader = csv.DictReader(f)
                 for row in reader:
-                    # 创建唯一标识符
-                    identifier = f"{row.get('文档标题', '')}-{row.get('所属项目', '')}-{row.get('文档关键词', '')}"
+                    # 创建唯一标识符（包含路径信息）
+                    identifier = f"{row.get('文档标题', '')}-{row.get('所属项目', '')}-{row.get('原飞书文档路径', '')}"
                     existing_results.add(identifier)
         except Exception as e:
             print(f"读取现有CSV文件失败: {e}")
@@ -788,7 +798,7 @@ def save_results_to_csv(results: List[Dict[str, str]], output_file_path: str = "
     # 过滤出新结果
     new_results = []
     for result in results:
-        identifier = f"{result['文档标题']}-{result['所属项目']}-{result['文档关键词']}"
+        identifier = f"{result['文档标题']}-{result['所属项目']}-{result['原飞书文档路径']}"
         if identifier not in existing_results:
             new_results.append(result)
     
@@ -820,8 +830,9 @@ def save_results_to_csv(results: List[Dict[str, str]], output_file_path: str = "
                             existing_data.append({
                                 '文档标题': row[0] if len(row) > 0 else '',
                                 '所属项目': row[1] if len(row) > 1 else '',
-                                '文档关键词': row[2] if len(row) > 2 else '',
-                                '文档内容概述': row[3] if len(row) > 3 else ''
+                                '原飞书文档路径': row[2] if len(row) > 2 else '',
+                                '文档关键词': row[3] if len(row) > 3 else '',
+                                '文档内容概述': row[4] if len(row) > 4 else ''
                             })
             except:
                 existing_data = []

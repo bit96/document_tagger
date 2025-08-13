@@ -33,7 +33,7 @@ def find_document_files(base_path):
     for search_path in search_paths:
         if search_path.exists():
             for ext in supported_extensions:
-                document_files.extend(search_path.glob(f'*{ext}'))
+                document_files.extend(search_path.rglob(f'*{ext}'))
     
     return document_files
 
